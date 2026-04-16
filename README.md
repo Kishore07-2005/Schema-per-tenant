@@ -1,93 +1,86 @@
-🏗️ Schema-per-Tenant PoC — Multi-Tenant Architecture
-A Proof of Concept validating PostgreSQL schema-per-tenant isolation using FastAPI, SQLAlchemy Async, and asyncpg.
----
-📌 What This Project Does
-This PoC validates that `SET search_path` works reliably with SQLAlchemy async sessions to isolate data between tenants in a multi-tenant application.
-Each tenant gets their own PostgreSQL schema (like a folder inside the database). When a request comes in, the server switches to that tenant's schema — so Tenant A can never see Tenant B's data.
----
-🧪 Test Results
-Test	Description	Status
-Test 1	SQLAlchemy Async session isolation	✅ PASSED
-Test 2	LangChain PGVector tenant isolation	🔄 In Progress
-Test 3	LangGraph PostgresSaver isolation	🔄 In Progress
-Test 4	Connection pool search_path leak test	🔄 In Progress
----
-🗂️ Project Structure
-```
-nexsoverse/
-│
-├── .env                  ← secret credentials (never uploaded)
-├── .env.example          ← template for environment variables
-├── .gitignore            ← files ignored by git
-├── seed.py               ← creates schemas and seeds test data
-├── main.py               ← FastAPI server (tenant-aware API)
-└── test_sqlalchemy_schema.py  ← validates tenant isolation
-```
----
-⚙️ How It Works
-```
-seed.py        →   Creates tenant_poc_a and tenant_poc_b schemas in PostgreSQL
-main.py        →   FastAPI server that reads X-Tenant-Slug header and sets search_path
-test file      →   Sends requests to the server and verifies data isolation
-```
-The Key Line
-```python
-await session.execute(text(f"SET search_path TO {tenant_slug}, public"))
-```
-This single line tells PostgreSQL to only look inside that tenant's schema folder — achieving complete data isolation.
----
-🚀 Getting Started
-1. Clone the repository
-```bash
-git clone https://github.com/YOUR_USERNAME/nexsoverse-multitenant-poc.git
-cd nexsoverse-multitenant-poc
-```
-2. Install dependencies
-```bash
-pip install fastapi sqlalchemy asyncpg uvicorn httpx python-dotenv pytest pytest-asyncio
-```
-3. Set up environment variables
-```bash
-cp .env.example .env
-```
-Open `.env` and fill in your actual database credentials.
-4. Set up the database
-Make sure PostgreSQL is running, then run:
-```bash
-python seed.py
-```
-5. Start the API server
-```bash
-python -m uvicorn main:app --reload
-```
-6. Run the tests
-Open a second terminal and run:
+# Nexsoverse - Schema-Based Multi-Tenancy POC
+
+This repository contains a Proof of Concept (POC) for building a multi-tenant backend using **FastAPI** and **SQLAlchemy (async)** with PostgreSQL. Multi-tenancy is achieved by utilizing PostgreSQL schemas, providing complete data isolation for each tenant within a single shared database.
+
+## Features
+
+- **FastAPI** for high-performance, asynchronous REST API endpoints.
+- **SQLAlchemy (Async)** with **asyncpg** for robust, non-blocking database interactions.
+- **PostgreSQL Schemas**: Isolates tenant data by dynamically switching the `search_path` per HTTP request.
+- **Data Seeding**: An included script to easily set up tenant schemas, tables, and mock data.
+- **Isolation Testing**: A simple async test script using `httpx` to verify that cross-tenant data boundaries are strictly enforced.
+
+## Project Structure
+
+- `main.py`: The FastAPI application containing the API routes and the middleware/logic for dynamic schema switching based on the `x-tenant-slug` HTTP header.
+- `seed.py`: Database seeding script. It creates schemas (e.g., `tenant_poc_a`, `tenant_poc_b`), creates the necessary shared tables, and inserts initial test data for each tenant.
+- `test_sqlalchemy_schema.py`: Test script that validates the tenant isolation of the `/tasks` endpoint by verifying the returned records.
+- `requirements`: The list of Python dependencies required to run the project.
+
+## Prerequisites
+
+- Python 3.8+
+- A running PostgreSQL database instance
+
+## Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd nexsoverse
+   ```
+
+2. **Set up a virtual environment (recommended):**
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On macOS/Linux:
+   source venv/bin/activate
+   ```
+
+3. **Install dependencies:**
+   ```bash
+   pip install -r requirements
+   ```
+
+4. **Configure Environment Variables:**
+   Ensure you have a `.env` file in the root directory with your PostgreSQL connection string:
+   ```env
+   DATABASE_URL=postgresql+asyncpg://username:password@localhost:5432/your_database_name
+   ```
+
+## Usage
+
+1. **Seed the database:**
+   Run the seed script to create the necessary schemas and insert mock data.
+   ```bash
+   python seed.py
+   ```
+
+2. **Run the FastAPI server:**
+   Start the application locally using Uvicorn.
+   ```bash
+   uvicorn main:app --reload
+   ```
+
+3. **Test the API endpoints:**
+   Once the server is running, you can retrieve tenant-specific data by providing the right headers.
+
+   Example for `tenant_poc_a`:
+   ```bash
+   curl -H "x-tenant-slug: tenant_poc_a" http://127.0.0.1:8000/tasks
+   ```
+
+   Example for `tenant_poc_b`:
+   ```bash
+   curl -H "x-tenant-slug: tenant_poc_b" http://127.0.0.1:8000/tasks
+   ```
+
+## Testing Isolation
+
+A test script is included to quickly verify that data isolation across PostgreSQL schemas is working as intended. Ensure the FastAPI server is running (`uvicorn main:app`) before executing the test script:
+
 ```bash
 python test_sqlalchemy_schema.py
 ```
----
-🔐 Environment Variables
-Create a `.env` file based on `.env.example`:
-```env
-DATABASE_URL=postgresql+asyncpg://your_username:your_password@localhost/taskflow
-```
----
-📦 Dependencies
-Package	Purpose
-`fastapi`	API framework
-`sqlalchemy`	Database ORM and query builder
-`asyncpg`	Async PostgreSQL driver
-`uvicorn`	ASGI web server
-`httpx`	HTTP client for testing
-`python-dotenv`	Load environment variables from .env
----
-🧠 Concepts Used
-Multi-tenancy — Multiple clients sharing one database securely
-PostgreSQL Schemas — Isolated "folders" inside a database per tenant
-SET search_path — Dynamically switches which schema PostgreSQL looks at
-Async SQLAlchemy — Non-blocking database queries
-FastAPI — Modern Python API framework
----
-👨‍💻 Author
-Kishore Kumar
-Part of the Nexsoverse backend team — Schema-per-Tenant PoC Sprint
